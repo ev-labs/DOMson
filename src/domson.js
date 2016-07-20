@@ -26,12 +26,12 @@ var DOMson = (function($, undefined) {
             return;
         }
 
-        var keyword = config.keywords;
+        var keywords = config.keywords;
 
         if (keywords !== undefined) {
-            var dataKey = config.dataKey;
-            var dataRequired = config.dataRequired;
-            var dataModified = config.dataModified;
+            var dataKey = keywords.dataKey;
+            var dataRequired = keywords.dataRequired;
+            var dataModified = keywords.dataModified;
 
             if (dataKey !== undefined && dataKey !== '') {
                 DATA_KEY = dataKey;
