@@ -9,28 +9,38 @@
     <h1>DOMson</h1>
     <h2>Example : Basic</h2>
 
-    <div data-key="person">
+    <div export-key="person">
       <div>
         <label>Name</label>
-        <input type="text" data-key="name" />
+        <input type="text" export-key="name" />
       </div>
 
       <div>
         <label>Age</label>
-        <input type="text" data-key="age" />
+        <input type="text" export-key="age" />
       </div>
 
       <div>
         <label>Gender</label>
-        <input type="radio" name="gender" data-key="gender" value="male" />Male
-        <input type="radio" name="gender" data-key="gender" value="female" />Female
+        <input type="radio" name="gender" export-key="gender" value="male" />Male
+        <input type="radio" name="gender" export-key="gender" value="female" />Female
       </div>
 
       <div>
         <label>Hobby</label>
-        <input type="checkbox" data-key="hobby" value="swimming" />Swimming
-        <input type="checkbox" data-key="hobby" value="cooking" />Cooking
-        <input type="checkbox" data-key="hobby" value="reading" />Reading
+        <input type="checkbox" export-key="hobby" value="swimming" />Swimming
+        <input type="checkbox" export-key="hobby" value="cooking" />Cooking
+        <input type="checkbox" export-key="hobby" value="reading" />Reading
+      </div>
+
+      <div>
+        <label>Job</label>
+        <select export-key="job">
+          <option value="">-</option>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="doctor">Doctor</option>
+        </select>
       </div>
     </div>
 
@@ -41,7 +51,7 @@
     </pre>
 
     <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <script src="../../dist/domson-1.0.0.min.js"></script>
+    <script src="../../dist/domson-1.0.1.min.js"></script>
 
     <script>
       $(document).ready(function() {

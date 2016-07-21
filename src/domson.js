@@ -1,5 +1,5 @@
 /**
- * DOMson v1.0.0
+ * DOMson v1.0.1
  * (c) 2016 James, EV-Labs
  * License: MIT
  */
@@ -7,12 +7,17 @@
 'use strict';
 
 var DOMson = (function($, undefined) {
-    var VERSION = '1.0.0';
+    var VERSION = '1.0.1';
 
-    var DATA_KEY = 'data-key';
-    var DATA_REQUIRED = 'data-required';
-    var DATA_MODIFIED = 'data-modified';
+    var _keywords = {
+        exportKey: 'export-key',
+        required: 'required',
+        modified: 'modified'
+    };
 
+    var _options = {
+        exportModifiedData: true
+    };
 
     var _eventAttached = false;
     var _domObject = null;
@@ -29,21 +34,13 @@ var DOMson = (function($, undefined) {
         var keywords = config.keywords;
 
         if (keywords !== undefined) {
-            var dataKey = keywords.dataKey;
-            var dataRequired = keywords.dataRequired;
-            var dataModified = keywords.dataModified;
+            _keywords = $.extend(_keywords, keywords);
+        }
 
-            if (dataKey !== undefined && dataKey !== '') {
-                DATA_KEY = dataKey;
-            }
+        var options = config.options;
 
-            if (dataRequired !== undefined && dataRequired !== '') {
-                DATA_REQUIRED = dataRequired;
-            }
-
-            if (dataModified !== undefined && dataModified !== '') {
-                DATA_MODIFIED = dataModified;
-            }
+        if (options !== undefined) {
+            _options = $.extend(_options, options);
         }
     }
 
@@ -58,15 +55,15 @@ var DOMson = (function($, undefined) {
             _domObject = $('*');
         }
 
-        _domObject.find(":input").on('change', function() {
+        _domObject.find(":input, select").on('change', function() {
             var type = $(this).attr('type');
-            var dataKey = $(this).attr(DATA_KEY);
+            var dataKey = $(this).attr(_keywords.exportKey);
 
             if (dataKey !== undefined && dataKey !== '') {
                 if (type === 'checkbox') {
-                    $('[' + DATA_KEY + '=' + dataKey + ']').attr(DATA_MODIFIED, true);
+                    $('[' + _keywords.exportKey + '=' + dataKey + ']').attr(_keywords.modified, true);
                 } else {
-                    $(this).attr(DATA_MODIFIED, true);
+                    $(this).attr(_keywords.modified, true);
                 }
             }
         });
@@ -94,14 +91,14 @@ var DOMson = (function($, undefined) {
     function _validate() {
         var result = {};
 
-        _domObject.find('[' + DATA_REQUIRED + ']').each(function(index, item) {
-            var dataKey = $(item).attr(DATA_KEY);
+        _domObject.find('[' + _keywords.required + ']').each(function(index, item) {
+            var dataKey = $(item).attr(_keywords.exportKey);
 
             if (dataKey === undefined || dataKey === '') {
                 return;
             }
 
-            var dataRequired = $(item).attr(DATA_REQUIRED);
+            var dataRequired = $(item).attr(_keywords.required);
             var isDataRequired = (dataRequired !== undefined && dataRequired !== false);
 
             if (isDataRequired === false) {
@@ -129,9 +126,9 @@ var DOMson = (function($, undefined) {
     function _traverse(current, output) {
         $(current).children().each(function(index, item) {
             var type = $(item).attr('type');
-            var tagName = item['tagName'];
+            var tagName = item['tagName'].toUpperCase();
 
-            var dataKey = $(item).attr(DATA_KEY);
+            var dataKey = $(item).attr(_keywords.exportKey);
             var isDataKeyExists = (dataKey !== undefined && dataKey !== '');
 
             if (isDataKeyExists === false) {
@@ -161,10 +158,17 @@ var DOMson = (function($, undefined) {
                 return;
             }
 
-            var dataModified = $(item).attr(DATA_MODIFIED);
+            var dataModified = $(item).attr(_keywords.modified);
             var isDataModified = (dataModified !== undefined && dataModified !== false);
 
-            if (isDataModified) {
+            if (isDataModified === false && _options.exportModifiedData) {
+              return;
+            }
+
+            if (tagName === 'SELECT') {
+                output[dataKey] = item.options[item.selectedIndex].value;
+
+            } else if (tagName === 'INPUT') {
                 if (type === 'checkbox') {
                     if (output[dataKey] === undefined) {
                         output[dataKey] = [];
@@ -177,6 +181,8 @@ var DOMson = (function($, undefined) {
                     }
 
                 } else if (type === 'radio') {
+                    output[dataKey] = '';
+
                     var checked = $(item).prop('checked');
 
                     if (checked !== undefined && checked === true) {
