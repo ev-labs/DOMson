@@ -143,7 +143,7 @@ var DOMson = (function($, undefined) {
 
                 if (Object.keys(nextOutput).length !== 0) {
                     if (output[dataKey] !== undefined) {
-                        if (typeof output[dataKey] === typeof {}) {
+                        if (Array.isArray(output[dataKey]) === false) {
                             var legacyObject = output[dataKey];
 
                             output[dataKey] = [];
