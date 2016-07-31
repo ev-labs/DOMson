@@ -1,239 +1,198 @@
 /**
- * DOMson v1.0.1
+ * DOMson v1.1.0
  * (c) 2016 James, EV-Labs
  * License: MIT
  */
 
 'use strict';
 
-var DOMson = (function($, undefined) {
-    var VERSION = '1.0.1';
+(function(window, $, undefined) {
+    var VERSION = '1.1.0';
 
-    var _keywords = {
-        exportKey: 'export-key',
-        required: 'required',
-        modified: 'modified'
-    };
+    var VALUE_TAGS = [
+        'input',
+        'select'
+    ];
 
-    var _options = {
-        exportModifiedData: true
-    };
+    var config = {
+        keywords: {
+            exportKey: 'export-key',
+            exportTarget: 'export-target'
+        },
+        options: {
+            exportOnlyTarget: true
+        }
+    }
 
-    var _eventAttached = false;
-    var _domObject = null;
+    var self = window.DOMson || {};
 
 
     /**
      * Set up a custom configuration
      */
-    function _setupConfig(config) {
-        if (config === undefined) {
+    function setupConfig(nextConfig) {
+        if (nextConfig === undefined) {
             return;
         }
-
-        var keywords = config.keywords;
-
-        if (keywords !== undefined) {
-            _keywords = $.extend(_keywords, keywords);
-        }
-
-        var options = config.options;
-
-        if (options !== undefined) {
-            _options = $.extend(_options, options);
-        }
+        config = $.extend(config, nextConfig);
     }
 
 
     /**
-     * Attach an event handler for detecting value change of input
+     * Attach an event handler for watching
      */
-    function _attachEvent(domElement) {
-        if (domElement !== undefined) {
-            _domObject = $(domElement);
-        } else {
-            _domObject = $('*');
+    function attachEvent(domElement, eventType) {
+        var jqObject = $(domElement);
+        var tagName = jqObject[0].tagName.toLowerCase();
+
+        if (eventType === undefined) {
+            eventType = 'change';
         }
 
-        _domObject.find(":input, select").on('change', function() {
-            var type = $(this).attr('type');
-            var dataKey = $(this).attr(_keywords.exportKey);
+        var selector = eventType + '.domson';
 
-            if (dataKey !== undefined && dataKey !== '') {
-                if (type === 'checkbox') {
-                    $('[' + _keywords.exportKey + '=' + dataKey + ']').attr(_keywords.modified, true);
-                } else {
-                    $(this).attr(_keywords.modified, true);
-                }
-            }
-        });
+        if ($.inArray(tagName, VALUE_TAGS) !== -1) {
+            jqObject.off(selector).one(selector, function() {
+                var type = jqObject.attr('type');
+                var exportKey = jqObject.attr(config.keywords.exportKey);
 
-        _eventAttached = true;
-    }
-
-
-    /**
-     * Detach an event handler
-     */
-    function _detachEvent() {
-        if (_domObject !== null && _eventAttached) {
-            _domObject.off('change');
-
-            _domObject = null;
-            _eventAttached = false;
-        }
-    }
-
-
-    /**
-     * Validate all elements that have an attribute data-required
-     */
-    function _validate() {
-        var result = {};
-
-        _domObject.find('[' + _keywords.required + ']').each(function(index, item) {
-            var dataKey = $(item).attr(_keywords.exportKey);
-
-            if (dataKey === undefined || dataKey === '') {
-                return;
-            }
-
-            var dataRequired = $(item).attr(_keywords.required);
-            var isDataRequired = (dataRequired !== undefined && dataRequired !== false);
-
-            if (isDataRequired === false) {
-                return;
-            }
-
-            if (item.value === undefined || item.value === '') {
-                if (result[dataKey] === undefined) {
-                    result[dataKey] = [];
-                }
-
-                if ($.inArray(result[dataKey], 'empty') === -1) {
-                    result[dataKey].push('empty')
-                }
-            }
-        });
-
-        return result;
-    }
-
-
-    /**
-     * Traverse attached DOM elements
-     */
-    function _traverse(current, output) {
-        $(current).children().each(function(index, item) {
-            var type = $(item).attr('type');
-            var tagName = item['tagName'].toUpperCase();
-
-            var dataKey = $(item).attr(_keywords.exportKey);
-            var isDataKeyExists = (dataKey !== undefined && dataKey !== '');
-
-            if (isDataKeyExists === false) {
-                _traverse(item, output);
-                return;
-            }
-
-            if (tagName === 'DIV') {
-                var nextOutput = {};
-
-                _traverse(item, nextOutput);
-
-                if (Object.keys(nextOutput).length !== 0) {
-                    if (output[dataKey] !== undefined) {
-                        if (Array.isArray(output[dataKey]) === false) {
-                            var legacyObject = output[dataKey];
-
-                            output[dataKey] = [];
-                            output[dataKey].push(legacyObject);
-                        }
-                        output[dataKey].push(nextOutput);
-
+                if (exportKey !== undefined && exportKey !== '') {
+                    if (type === 'checkbox') {
+                        $('[' + config.keywords.exportKey + '=' + exportKey + ']').attr(config.keywords.exportTarget, true);
                     } else {
-                        output[dataKey] = nextOutput;
+                        jqObject.attr(config.keywords.exportTarget, true);
                     }
                 }
+            });
+        }
+
+        var childrenSelector = VALUE_TAGS.join(',');
+
+        if (jqObject.children().length > 0) {
+            jqObject.find(childrenSelector).each(function() {
+                attachEvent(this);
+            });
+        }
+    }
+
+
+    /**
+     * Traverse DOM elements for export
+     */
+    function traverse(domElement, output) {
+        var jqObject = $(domElement);
+        var tagName = jqObject[0]['tagName'].toLowerCase();
+
+        var exportKey = jqObject.attr(config.keywords.exportKey);
+        var isExportKeyExists = (exportKey !== undefined && exportKey !== '');
+        var isValueTag = ($.inArray(tagName, VALUE_TAGS) !== -1);
+
+        var children = jqObject.children();
+
+        if (children.length === 0 || isValueTag) {
+            var type = jqObject.attr('type');
+
+            var exportTarget = jqObject.attr(config.keywords.exportTarget);
+            var isExportTarget = (exportTarget !== undefined && exportTarget !== false);
+
+            if (isExportTarget === false && config.options.exportOnlyTarget) {
                 return;
             }
 
-            var dataModified = $(item).attr(_keywords.modified);
-            var isDataModified = (dataModified !== undefined && dataModified !== false);
+            if (tagName === 'select') {
+                output[exportKey] = domElement.options[domElement.selectedIndex].value;
 
-            if (isDataModified === false && _options.exportModifiedData) {
-              return;
-            }
-
-            if (tagName === 'SELECT') {
-                output[dataKey] = item.options[item.selectedIndex].value;
-
-            } else if (tagName === 'INPUT') {
+            } else if (tagName === 'input') {
                 if (type === 'checkbox') {
-                    if (output[dataKey] === undefined) {
-                        output[dataKey] = [];
+                    if (output[exportKey] === undefined) {
+                        output[exportKey] = [];
                     }
 
-                    var checked = $(item).prop('checked');
+                    var checked = jqObject.prop('checked');
 
                     if (checked !== undefined && checked === true) {
-                        output[dataKey].push(item.value);
+                        output[exportKey].push(domElement.value);
                     }
 
                 } else if (type === 'radio') {
-                    output[dataKey] = '';
-
-                    var checked = $(item).prop('checked');
+                    var checked = jqObject.prop('checked');
 
                     if (checked !== undefined && checked === true) {
-                        output[dataKey] = item.value;
+                        output[exportKey] = domElement.value;
                     }
 
                 } else {
-                    output[dataKey] = item.value;
+                    if (output[exportKey] !== undefined) {
+                        if (false === Array.isArray(output[exportKey])) {
+                            var legacyObject = output[exportKey];
+
+                            output[exportKey] = [];
+                            output[exportKey].push(legacyObject);
+                        }
+                        output[exportKey].push(domElement.value);
+
+                    } else {
+                        output[exportKey] = domElement.value;
+                    }
                 }
             }
-        });
-    }
+        } else {
+            var outputOfChildren = isExportKeyExists ? {} : output;
 
-    return {
-        attach: function(domElement, config) {
-            if (_eventAttached === true) {
-                console.error('DOMson already attached');
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                traverse(child, outputOfChildren);
+            }
+
+            if (Object.keys(outputOfChildren).length === 0) {
                 return;
             }
 
-            _setupConfig(config);
-            _attachEvent(domElement);
-
-            return (_eventAttached === true);
-        },
-
-        detach: function() {
-            _detachEvent();
-
-            return (_eventAttached === false);
-        },
-
-        validate: function() {
-            if (_domObject === null || _eventAttached === false) {
-                console.error('DOMson is not attached');
+            if (false === isExportKeyExists) {
                 return;
             }
 
-            return _validate();
-        },
+            if (output[exportKey] !== undefined) {
+                if (false === Array.isArray(output[exportKey])) {
+                    var legacyObject = output[exportKey];
 
-        export: function() {
-            if (_domObject === null || _eventAttached === false) {
-                console.error('DOMson is not attached');
-                return;
+                    output[exportKey] = [];
+                    output[exportKey].push(legacyObject);
+                }
+                output[exportKey].push(outputOfChildren);
+
+            } else {
+                output[exportKey] = outputOfChildren;
             }
-
-            var resultObject = {};
-            _traverse(_domObject, resultObject);
-
-            return resultObject;
         }
     }
-})(jQuery);
+
+
+    self.watch = function(domElement) {
+        if (domElement === undefined) {
+            domElement = document.body;
+        }
+        attachEvent(domElement);
+    };
+
+
+    self.export = function(domElement) {
+        if (domElement === undefined) {
+            domElement = document.body;
+        }
+
+        var resultObject = {};
+        traverse(domElement, resultObject);
+
+        return resultObject;
+    };
+
+
+    self.config = function(config) {
+        setupConfig(config);
+    };
+
+
+    window.DOMson = self;
+
+})(window, jQuery);

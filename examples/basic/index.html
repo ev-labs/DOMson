@@ -16,8 +16,8 @@
       </div>
 
       <div>
-        <label>Age</label>
-        <input type="text" export-key="age" />
+        <label>Email</label>
+        <input type="text" export-key="email" />
       </div>
 
       <div>
@@ -51,11 +51,11 @@
     </pre>
 
     <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <script src="../../dist/domson-1.0.1.min.js"></script>
+    <script src="../../dist/domson-1.1.0.min.js"></script>
 
     <script>
       $(document).ready(function() {
-        DOMson.attach(document.body);
+        DOMson.watch();
       });
 
       function onSubmit() {
